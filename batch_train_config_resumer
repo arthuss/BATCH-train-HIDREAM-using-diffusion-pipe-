@@ -1,0 +1,62 @@
+#!/bin/bash
+
+set -e
+
+THEMA_DIR="/home/root/workspace/dataset"
+OUT_DIR="/home/root/workspace/output"
+TOML_DIR="/home/root/workspace/tomls"
+
+mkdir -p "$TOML_DIR"
+
+echo "📝 Erstelle .toml-Dateien..."
+
+for kat_path in "$THEMA_DIR"/*/; do
+    [ -d "$kat_path" ] || continue
+    kat_basename=$(basename "$kat_path")
+
+    dataset_name="$TOML_DIR/dataset_${kat_basename}.toml"
+    config_name="$TOML_DIR/config_${kat_basename}.toml"
+
+    echo "📝 Erstelle Dateien für $kat_basename..."
+
+    # dataset_*.toml Datei mit resolution in jedem directory-Eintrag
+    cat <<EOF > "$dataset_name"
+directory = [
+  { data_dir = "$THEMA_DIR/$kat_basename", caption_type = "filename", resolution = [512, 512] }
+]
+tokenizer = "llama3"
+is_image = true
+EOF
+
+    # config_*.toml Datei
+    cat <<EOF > "$config_name"
+[train]
+dataset_config = "$dataset_name"
+output_dir = "$OUT_DIR/$kat_basename"
+epochs = 60
+save_every_n_epochs = 10
+sample_every_n_epochs = 10
+log_every_n_steps = 10
+train_batch_size = 1
+gradient_accumulation_steps = 4
+learning_rate = 5e-5
+
+[model]
+pretrained_model_name_or_path = "TencentARC/HiDream"
+type = "HiDreamImagePipeline"
+
+[sample]
+prompt = "3d concept art, model"
+negative_prompt = "ugly, lowres"
+width = 1024
+height = 1024
+num_inference_steps = 30
+num_images_per_prompt = 4
+
+[deepspeed]
+enable = true
+EOF
+
+done
+
+echo "✅ Alle .toml-Dateien wurden erstellt."
