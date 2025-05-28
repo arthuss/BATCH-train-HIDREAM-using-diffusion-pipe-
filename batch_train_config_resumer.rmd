@@ -1,0 +1,116 @@
+Here's a complete guide on how to set up a working HiDream-LoRA training environment under WSL2 (Ubuntu 22.04/24.04) with diffusion-pipe – including CUDA 12.4, Python 3.10, a virtual environment, data structure, dataset creation via a shell script, and training with DeepSpeed.
+
+🛠️ WSL2 Setup for HiDream-LoRA with diffusion-pipe
+1. 📦 Prepare WSL2 (Ubuntu 22.04 or 24.04)
+Bash
+
+wsl --install -d Ubuntu-24.04
+After installation, in the WSL terminal:
+
+Bash
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y build-essential git wget curl unzip python3.10 python3.10-venv python3.10-dev
+If necessary, set Python 3.10 as the default:
+
+Bash
+
+sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+2. ⚡ Install CUDA 12.4 Toolkit (for WSL)
+Bash
+
+wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-keyring_1.1-1_all.deb
+sudo dpkg -i cuda-keyring_1.1-1_all.deb
+sudo apt update
+sudo apt -y install cuda-toolkit-12-4
+Verify:
+
+Bash
+
+nvcc --version
+3. 🧪 Create a Python Virtual Environment
+Bash
+
+python3.10 -m venv ~/hidream_venv
+source ~/hidream_venv/bin/activate
+Upgrade pip:
+
+Bash
+
+pip install --upgrade pip setuptools wheel
+4. 📦 Install diffusion-pipe & Dependencies
+Bash
+
+git clone https://github.com/TencentARC/diffusion-pipe.git
+cd diffusion-pipe
+pip install -r requirements.txt
+Additionally:
+
+Bash
+
+pip install deepspeed accelerate
+Optional (if not already included):
+
+Bash
+
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+5. 📁 Prepare Project Structure & Dataset
+Bash
+
+mkdir -p ~/workspace/dataset
+mkdir -p ~/workspace/output
+Example structure:
+
+Bash
+
+~/workspace/dataset/
+├── 1_Characters_Animals/
+│   ├── lion.png
+│   └── ...
+├── 2_Characters_Creatures/
+│   └── ...
+💡 Simply name the images – caption_type = "filename" will be used!
+
+6. 🧾 Automatically Create TOML Files
+Save the following script as train_config_resumer.sh (You will need to create this script based on your needs, as its content is not provided in the original text, only its usage).
+
+Bash
+
+chmod +x train_config_resumer.sh
+./train_config_resumer.sh
+➡️ This automatically creates:
+
+dataset_*.toml for each subfolder
+config_*.toml with all training parameters
+Location of the files:
+
+Bash
+
+~/workspace/tomls/
+7. 🚀 Start Training
+Example:
+
+Bash
+
+deepspeed train.py --deepspeed --config ~/workspace/tomls/config_1_Characters_Animals.toml
+Alternatively (for the resumer script - you'll need to create train_config_resumer.py as well):
+
+Bash
+
+./train_config_resumer.py
+(This creates temporary .toml copies and starts DeepSpeed automatically.)
+
+8. 🧪 Checkpoints & Samples
+You can find the results, for example, here:
+
+Ruby
+
+~/workspace/output/1_Characters_Animals/20250519_00-00-00/
+├── checkpoints/
+├── samples/
+└── train_log.txt
+✅ Tips
+Ensure your GPU drivers under Windows are up-to-date (>= 531+ for CUDA 12.4).
+Use nvidia-smi in PowerShell to check if WSL-CUDA is working.
+Always start WSL as an administrator if you encounter problems with GPU access.
