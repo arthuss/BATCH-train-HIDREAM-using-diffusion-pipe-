@@ -1,0 +1,89 @@
+import os
+from pathlib import Path
+import toml
+
+# Verzeichnisse
+base_dataset_dir = Path("/home/root/workspace/datasets/mostly_black_and_white_storyboard_sketch")
+output_dir = Path("/home/root/workspace/output")
+toml_output_dir = Path("/root/diffusion-pipe")
+model_dir = "/home/root/workspace/models/hidream-full"
+llama_path = "/home/root/workspace/models/llama-3.1"
+
+# Konfiguration
+ar_buckets = [[512, 512], [584, 440], [440, 584], [624, 416], [416, 624]]
+
+# Sicherstellen, dass das Zielverzeichnis existiert
+toml_output_dir.mkdir(parents=True, exist_ok=True)
+
+# Alle Kategorien durchgehen
+for category in sorted(base_dataset_dir.iterdir()):
+    if not category.is_dir():
+        continue
+
+    name = category.name.lower().replace(" ", "_")
+
+    config_data = {
+        "output_dir": str(output_dir / name),
+        "dataset": f"dataset_{name}.toml",
+        "epochs": 50,
+        "micro_batch_size_per_gpu": 1,
+        "pipeline_stages": 1,
+        "gradient_accumulation_steps": 4,
+        "gradient_clipping": 1.0,
+        "warmup_steps": 25,
+        "blocks_to_swap": 20,
+        "eval_every_n_epochs": 1,
+        "eval_before_first_step": True,
+        "eval_micro_batch_size_per_gpu": 1,
+        "eval_gradient_accumulation_steps": 1,
+        "save_every_n_epochs": 10,
+        "checkpoint_every_n_minutes": 15,
+        "activation_checkpointing": True,
+        "partition_method": "parameters",
+        "save_dtype": "bfloat16",
+        "caching_batch_size": 1,
+        "steps_per_print": 1,
+        "video_clip_mode": "single_beginning",
+        "model": {
+            "type": "hidream",
+            "diffusers_path": model_dir,
+            "llama3_path": llama_path,
+            "llama3_4bit": True,
+            "dtype": "bfloat16",
+            "transformer_dtype": "nf4",
+            "max_llama3_sequence_length": 128,
+            "flux_shift": True
+        },
+        "adapter": {
+            "type": "lora",
+            "rank": 32,
+            "dtype": "bfloat16"
+        },
+        "optimizer": {
+            "type": "adamw_optimi",
+            "lr": 4e-4,
+            "betas": [0.9, 0.99],
+            "weight_decay": 0.01,
+            "eps": 1e-8
+        }
+    }
+
+    dataset_data = {
+        "resolutions": [512],
+        "enable_ar_bucket": True,
+        "ar_buckets": ar_buckets,
+        "directory": [
+            {"path": str(category)}
+        ]
+    }
+
+    # Schreiben
+    config_path = toml_output_dir / f"config_{name}.toml"
+    dataset_path = toml_output_dir / f"dataset_{name}.toml"
+
+    with open(config_path, "w") as f:
+        toml.dump(config_data, f)
+    with open(dataset_path, "w") as f:
+        toml.dump(dataset_data, f)
+
+    print(f"✔️ Erstellt: {config_path} & {dataset_path}")
